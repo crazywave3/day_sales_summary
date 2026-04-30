@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이세븐 판매량 대시보드</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Apple SD Gothic Neo', '맑은 고딕', sans-serif; background: #f5f6fa; color: #222; font-size: 14px; }
+
+.header { background: #1a1a2e; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.header-left h1 { font-size: 18px; font-weight: 700; }
+.header-left .sub { font-size: 12px; color: #aaa; margin-top: 3px; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.last-update { font-size: 12px; color: #7ecfff; white-space: nowrap; }
+.upload-btn { background: #4a90e2; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+.upload-btn:hover { background: #357abd; }
+.upload-input { display: none; }
+.upload-inline-msg { font-size: 12px; color: #7ecfff; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.undo-btn { background: #e74c3c; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; display: none; align-items: center; gap: 6px; font-family: inherit; }
+.undo-btn:hover { background: #c0392b; }
+.undo-btn.visible { display: flex; }
+
+.tabs { background: white; border-bottom: 2px solid #e0e0e0; padding: 0 24px; display: flex; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; flex-shrink: 0; }
+.tab.active { color: #1a1a2e; border-bottom-color: #1a1a2e; font-weight: 700; }
+
+.content { padding: 16px 24px; max-width: 1600px; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+.summary-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.card { background: white; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card .label { font-size: 11px; color: #888; margin-bottom: 4px; }
+.card .value { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+.card .sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+.toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+.toolbar select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; background: white; }
+
+.table-outer { border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); background: white; overflow: hidden; }
+.table-scroll-top { overflow-x: auto; overflow-y: hidden; height: 12px; background: #f0f0f0; }
+.table-scroll-top-inner { height: 1px; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+table { width: max-content; min-width: 100%; border-collapse: collapse; background: white; }
+th { background: #1a1a2e; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; text-align: center; white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px; text-align: center; white-space: nowrap; background: white; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8f9ff !important; }
+.num { font-weight: 600; color: #1a1a2e; }
+.zero { color: #ddd; }
+.total-row td { background: #eef1ff !important; font-weight: 700; }
+.year-total-row td { background: #e8f5e9 !important; font-weight: 700; color: #2e7d32; }
+.month-total-row td { background: #fff8e1 !important; font-weight: 700; color: #e65100; }
+
+td.col-rank, th.col-rank { position: sticky; left: 0; z-index: 2; width: 44px; min-width: 44px; text-align: center; }
+th.col-rank { background: #1a1a2e; z-index: 3; }
+td.col-rank { background: white; }
+td.col-name, th.col-name { position: sticky; left: 44px; z-index: 2; width: 120px; min-width: 120px; max-width: 120px; text-align: left; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid #d0d0d0; }
+th.col-name { background: #1a1a2e; z-index: 3; }
+td.col-name { background: white; }
+td.col-date, th.col-date { position: sticky; left: 0; z-index: 2; width: 72px; min-width: 72px; text-align: left; font-weight: 600; }
+th.col-date { background: #1a1a2e; z-index: 3; }
+td.col-date { background: white; }
+td.col-subtotal, th.col-subtotal { position: sticky; left: 72px; z-index: 2; width: 54px; min-width: 54px; text-align: center; border-right: 2px solid #c0c0c0; font-weight: 600; }
+th.col-subtotal { background: #1a1a2e; z-index: 3; border-right: 2px solid #5a7acc; }
+td.col-subtotal { background: white; }
+
+.total-row td.col-rank, .total-row td.col-name { background: #eef1ff !important; }
+.year-total-row td.col-date, .year-total-row td.col-subtotal { background: #e8f5e9 !important; }
+.month-total-row td.col-date, .month-total-row td.col-subtotal { background: #fff8e1 !important; }
+
+.rank-num { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #eee; color: #888; font-size: 10px; font-weight: 700; line-height: 22px; text-align: center; }
+.rank-num.gold { background: #f5a623; color: white; }
+.rank-num.silver { background: #9b9b9b; color: white; }
+.rank-num.bronze { background: #c47c3a; color: white; }
+
+.month-btns { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.mbtn { padding: 6px 12px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; font-size: 12px; background: white; color: #555; font-family: inherit; }
+.mbtn.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+
+.chart-toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.toggle-btns { display: flex; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+.toggle-btn { padding: 7px 16px; font-size: 13px; cursor: pointer; background: white; color: #555; border: none; font-family: inherit; }
+.toggle-btn.active { background: #1a1a2e; color: white; }
+.chart-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.chart-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.chart-rank { width: 28px; font-size: 11px; font-weight: 700; color: #aaa; text-align: right; flex-shrink: 0; }
+.chart-label { width: 120px; font-size: 12px; color: #333; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.chart-bar-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
+.chart-bar { height: 24px; border-radius: 4px; background: #4a90e2; flex-shrink: 0; min-width: 4px; }
+.chart-bar.gold { background: #f5a623; }
+.chart-bar.silver { background: #9b9b9b; }
+.chart-bar.bronze { background: #c47c3a; }
+.chart-val { font-size: 12px; font-weight: 700; color: #333; white-space: nowrap; flex-shrink: 0; }
+
+.year-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px; margin-bottom: 20px; }
+.year-card { background: white; border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-left: 4px solid #ddd; }
+.year-card.has-data { border-left-color: #1a1a2e; }
+.year-card.current { border-left-color: #4a90e2; }
+.year-card .y-year { font-size: 12px; color: #888; margin-bottom: 4px; }
+.year-card .y-total { font-size: 26px; font-weight: 700; color: #ccc; }
+.year-card.has-data .y-total { color: #1a1a2e; }
+.year-card.current .y-total { color: #4a90e2; }
+.year-card .y-sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+@media (max-width: 768px) {
+  .header { padding: 12px 16px; }
+  .header-left h1 { font-size: 14px; }
+  .header-left .sub, .last-update, .upload-inline-msg { display: none; }
+  .upload-btn, .undo-btn { padding: 7px 10px; font-size: 12px; }
+  .tabs { padding: 0 8px; }
+  .tab { padding: 10px 14px; font-size: 13px; }
+  .content { padding: 12px 12px 80px; }
+  .summary-cards { grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
+  .card { padding: 12px 14px; }
+  .card .value { font-size: 20px; }
+  .card .label, .card .sub { font-size: 10px; }
+  .toolbar select { font-size: 12px; padding: 7px 10px; }
+  .mbtn { font-size: 11px; padding: 5px 10px; }
+  .chart-label { width: 90px; font-size: 11px; }
+  .chart-bar { height: 20px; }
+  .year-cards { grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .year-card .y-total { font-size: 22px; }
+  th { padding: 8px 8px; font-size: 11px; }
+  td { padding: 7px 8px; font-size: 12px; }
+  .monthly-bar-chart { padding: 12px; }
+  .mbc-cols { height: 100px; gap: 4px; }
+  .mbc-val { font-size: 9px; }
+  .mbc-label { font-size: 9px; }
+}
+@media (min-width: 769px) {
+  .mobile-list { display: none !important; }
+  .mobile-day-list { display: none !important; }
+}
+
+/* 품목별 검색 */
+.chart-search { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+.chart-search input { flex: 1; max-width: 300px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; }
+.chart-search input:focus { border-color: #4a90e2; }
+.chart-search button { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.chart-search button:first-of-type { background: #1a1a2e; color: white; }
+.chart-search button:first-of-type:hover { background: #2a2a4e; }
+#chart-search-clear { background: #f0f0f0; color: #555; }
+#chart-search-clear:hover { background: #e0e0e0; }
+.monthly-bar-chart { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; }
+.monthly-bar-chart h3 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 16px; }
+.mbc-cols { display: flex; align-items: flex-end; gap: 6px; height: 200px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; }
+.mbc-col { display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: flex-end; height: 100%; }
+.mbc-val { font-size: 11px; font-weight: 700; color: #333; margin-bottom: 3px; white-space: nowrap; min-height: 16px; }
+.mbc-bar { width: 80%; border-radius: 4px 4px 0 0; background: #4a90e2; transition: height 0.4s; }
+.mbc-bar.current { background: #1a1a2e; }
+.mbc-bar.empty { background: transparent; }
+.mbc-label { font-size: 11px; color: #888; margin-top: 6px; }
+
+/* 월별 테이블 - 순위+품목명+합계 고정 */
+td.col-monthtotal, th.col-monthtotal { position: sticky; left: 164px; z-index: 2; width: 60px; min-width: 60px; text-align: center; border-right: 2px solid #c0c0c0; font-weight: 600; }
+th.col-monthtotal { background: #1a1a2e; z-index: 3; border-right: 2px solid #5a7acc; }
+td.col-monthtotal { background: white; }
+.total-row td.col-monthtotal { background: #eef1ff !important; }
+tr:hover td.col-monthtotal { background: #f8f9ff !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>데이세븐 스마트스토어 판매량 대시보드</h1>
+    <div class="sub">네이버 스마트스토어</div>
+  </div>
+  <div class="header-right">
+    <div id="upload-inline-msg" class="upload-inline-msg"></div>
+    <div class="last-update" id="last-update"></div>
+    <div class="last-update" style="color:#aaa;">v2.0</div>
+    <button class="undo-btn" id="undo-btn" onclick="undoUpload()">↩ 업로드 취소</button>
+    <label class="upload-btn">📂 주문서 업로드<input type="file" class="upload-input" id="upload-input" accept=".xlsx" onchange="handleFile(this.files[0])"></label>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('products',this)">품목별</div>
+  <div class="tab" onclick="switchTab('monthly',this)">월별</div>
+  <div class="tab" onclick="switchTab('yearly',this)">연도별</div>
+  <div class="tab" onclick="switchTab('daily',this)">일별</div>
+</div>
+
+<div class="content">
+  <div class="summary-cards">
+    <div class="card"><div class="label" id="label-total">누적 합계</div><div class="value" id="sum-total">-</div><div class="sub">전 품목 합계</div></div>
+    <div class="card"><div class="label" id="label-month">이번달 합계</div><div class="value" id="sum-month">-</div><div class="sub" id="sub-month"></div></div>
+    <div class="card"><div class="label" id="label-today">최근일 판매</div><div class="value" id="sum-today">-</div><div class="sub">최근 날짜 기준</div></div>
+    <div class="card"><div class="label">총 품목 수</div><div class="value" id="sum-products">-</div><div class="sub">관리 품목</div></div>
+  </div>
+
+  <div class="view active" id="view-products">
+    <div class="chart-toolbar">
+      <div class="toggle-btns" id="chart-range-btns"></div>
+      <select id="chart-period" onchange="renderChart()"></select>
+    </div>
+    <div class="chart-search">
+      <input type="text" id="chart-search-input" placeholder="품목명 검색 (2글자 이상)..." onkeydown="if(event.key==='Enter') searchChart()">
+      <button onclick="searchChart()">검색</button>
+      <button onclick="clearSearch()" id="chart-search-clear" style="display:none;">✕ 초기화</button>
+    </div>
+    <div class="chart-container" id="chart-container"></div>
+  </div>
+
+  <div class="view" id="view-monthly">
+    <!-- 월별 바 그래프 -->
+    <div class="monthly-bar-chart" id="monthly-bar-chart"></div>
+    <div class="toolbar">
+      <select id="monthly-sort" onchange="renderMonthly()">
+        <option value="total-desc">판매량 높은순</option>
+        <option value="total-asc">판매량 낮은순</option>
+        <option value="name">이름순</option>
+      </select>
+    </div>
+    <div class="table-outer">
+      <div class="table-scroll-top" id="monthly-scroll-top"><div class="table-scroll-top-inner" id="monthly-scroll-inner"></div></div>
+      <div class="table-wrap" id="monthly-table-wrap"><table><thead id="monthly-thead"></thead><tbody id="monthly-tbody"></tbody></table></div>
+    </div>
+    <div class="mobile-list" id="monthly-mobile"></div>
+  </div>
+
+  <div class="view" id="view-yearly">
+    <div class="toolbar">
+      <select id="yearly-sort" onchange="renderYearly()">
+        <option value="total-desc">판매량 높은순</option>
+        <option value="total-asc">판매량 낮은순</option>
+        <option value="name">이름순</option>
+      </select>
+    </div>
+    <div class="year-cards" id="year-cards"></div>
+    <div class="table-outer">
+      <div class="table-scroll-top" id="yearly-scroll-top"><div class="table-scroll-top-inner" id="yearly-scroll-inner"></div></div>
+      <div class="table-wrap" id="yearly-table-wrap"><table><thead id="yearly-thead"></thead><tbody id="yearly-tbody"></tbody></table></div>
+    </div>
+    <div class="mobile-list" id="yearly-mobile"></div>
+  </div>
+
+  <div class="view" id="view-daily">
+    <div class="month-btns" id="month-btns"></div>
+    <div class="table-outer">
+      <div class="table-scroll-top" id="daily-scroll-top"><div class="table-scroll-top-inner" id="daily-scroll-inner"></div></div>
+      <div class="table-wrap" id="daily-table-wrap"><table><thead id="daily-thead"></thead><tbody id="daily-tbody"></tbody></table></div>
+    </div>
+    <div class="mobile-day-list" id="daily-mobile"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const PRODUCTS = [
+  {
+    "name": "케틀팟 2리터",
+    "code": "DYABA08-020",
+    "col": 1
+  },
+  {
+    "name": "케틀팟 1.5리터",
+    "code": "DYABA08-015",
+    "col": 2
+  },
+  {
+    "name": "컬러케틀팟 2리터",
+    "code": "DYABB08-020",
+    "col": 3
+  },
+  {
+    "name": "케틀셰프팟",
+    "code": "DYABS08-004",
+    "col": 4
+  },
+  {
+    "name": "무연마케틀팟 2L",
+    "code": "DYAAA08-020",
+    "col": 5
+  },
+  {
+    "name": "무연마케틀팟 1.5L",
+    "code": "DYAAA08-015",
+    "col": 6
+  },
+  {
+    "name": "쌀세척볼 23cm",
+    "code": "DYGEB34-230",
+    "col": 7
+  },
+  {
+    "name": "쌀세척볼 26cm",
+    "code": "DYGEB34-260",
+    "col": 8
+  },
+  {
+    "name": "사각트레이 23.5",
+    "code": "DYGEA31-235",
+    "col": 9
+  },
+  {
+    "name": "사각트레이 26.5",
+    "code": "DYGEA31-265",
+    "col": 10
+  },
+  {
+    "name": "사각트레이 31.5",
+    "code": "DYGEA31-315",
+    "col": 11
+  },
+  {
+    "name": "사각트레이 40.5",
+    "code": "DYGEA31-405",
+    "col": 12
+  },
+  {
+    "name": "타워곰솥 26cm",
+    "code": "DYABA04-260",
+    "col": 13
+  },
+  {
+    "name": "타워곰솥 30cm",
+    "code": "DYABA04-300",
+    "col": 14
+  },
+  {
+    "name": "타워곰솥 일자 30",
+    "code": "DYABB04-300",
+    "col": 15
+  },
+  {
+    "name": "잼팟 9리터",
+    "code": "DYABA09-090",
+    "col": 16
+  },
+  {
+    "name": "도담 1.5리터",
+    "code": "DYCBA02-015",
+    "col": 17
+  },
+  {
+    "name": "도담 3리터",
+    "code": "DYCBA02-030",
+    "col": 18
+  },
+  {
+    "name": "도담 5리터",
+    "code": "DYCBA02-050",
+    "col": 19
+  },
+  {
+    "name": "도담 7리터",
+    "code": "DYCBA02-070",
+    "col": 20
+  },
+  {
+    "name": "2단 찜냄비",
+    "code": "DYABA06-280",
+    "col": 21
+  },
+  {
+    "name": "돔스티머",
+    "code": "DYGEB17-280",
+    "col": 22
+  },
+  {
+    "name": "마이야르 돔스티머",
+    "code": "MAGEB17-280",
+    "col": 23
+  },
+  {
+    "name": "깊은사각 1+1",
+    "code": "DYGAA31-006",
+    "col": 24
+  },
+  {
+    "name": "깊은사각 단품",
+    "code": "DYGAA31-003",
+    "col": 25
+  },
+  {
+    "name": "곰솥냄비",
+    "code": "DYAE260A",
+    "col": 26
+  },
+  {
+    "name": "믹싱볼 22cm",
+    "code": "DYSG02A-002",
+    "col": 27
+  },
+  {
+    "name": "믹싱볼 26cm",
+    "code": "DYSG02B-002",
+    "col": 28
+  },
+  {
+    "name": "타공망 20cm",
+    "code": "DYGP020A",
+    "col": 29
+  },
+  {
+    "name": "타공망 23cm",
+    "code": "DYGP023B",
+    "col": 30
+  },
+  {
+    "name": "타공망 26cm",
+    "code": "DYGP026B",
+    "col": 31
+  },
+  {
+    "name": "타공망 3종 세트",
+    "code": "DYGS003A",
+    "col": 32
+  },
+  {
+    "name": "씨엘 편수 18cm",
+    "code": "DCAB01A-180",
+    "col": 33
+  },
+  {
+    "name": "씨엘 양수 20cm",
+    "code": "DCAB02A-200",
+    "col": 34
+  },
+  {
+    "name": "씨엘 양수 24cm",
+    "code": "DCAB02A-240",
+    "col": 35
+  },
+  {
+    "name": "씨엘 전골 24cm",
+    "code": "DCAB03A-240",
+    "col": 36
+  },
+  {
+    "name": "비타 편수 14cm",
+    "code": "DVAA140A",
+    "col": 37
+  },
+  {
+    "name": "비타 편수 16cm",
+    "code": "DVAA160A",
+    "col": 38
+  },
+  {
+    "name": "비타 양수 18cm",
+    "code": "DVAB180A",
+    "col": 39
+  },
+  {
+    "name": "비타 양수 24cm",
+    "code": "DVAB240A",
+    "col": 40
+  },
+  {
+    "name": "비타 전골 24cm",
+    "code": "DVAC240A",
+    "col": 41
+  },
+  {
+    "name": "도가 편수 18cm",
+    "code": "DDAA180A",
+    "col": 42
+  },
+  {
+    "name": "도가 양수 24cm",
+    "code": "DDAB240A",
+    "col": 43
+  },
+  {
+    "name": "도가 전골 24cm",
+    "code": "DDAC240A",
+    "col": 44
+  },
+  {
+    "name": "도가 팬 26cm",
+    "code": "DDBG260A",
+    "col": 45
+  },
+  {
+    "name": "도가 사각팬 22cm",
+    "code": "DDBI220A",
+    "col": 46
+  },
+  {
+    "name": "엑스팬 20cm",
+    "code": "DYBHA01-200",
+    "col": 47
+  },
+  {
+    "name": "엑스팬 26cm",
+    "code": "DYBHA01-260",
+    "col": 48
+  },
+  {
+    "name": "엑스팬 30cm",
+    "code": "DYBHA01-300",
+    "col": 49
+  },
+  {
+    "name": "거름망 4.5cm",
+    "code": "DYGAA20-045",
+    "col": 50
+  },
+  {
+    "name": "거름망 6.5cm",
+    "code": "DYGAA20-065",
+    "col": 51
+  },
+  {
+    "name": "거름망 8.5cm",
+    "code": "DYGAA20-085",
+    "col": 52
+  },
+  {
+    "name": "계량컵 500",
+    "code": "DYGEA16-050",
+    "col": 53
+  },
+  {
+    "name": "계량컵 1000",
+    "code": "DYGEA16-100",
+    "col": 54
+  },
+  {
+    "name": "스키머 11cm",
+    "code": "DYGEA18-110",
+    "col": 55
+  },
+  {
+    "name": "스키머 13cm",
+    "code": "DYGEA18-130",
+    "col": 56
+  },
+  {
+    "name": "진공컵 (민자)",
+    "code": "DYEBA01-055",
+    "col": 57
+  },
+  {
+    "name": "진공컵 (벌집)",
+    "code": "DYEBB01-055",
+    "col": 58
+  },
+  {
+    "name": "진공컵 (물방울)",
+    "code": "DYEBC01-055",
+    "col": 59
+  },
+  {
+    "name": "믹싱볼 3종 22cm",
+    "code": "DYGAB33-220",
+    "col": 60
+  },
+  {
+    "name": "믹싱볼 3종 24cm",
+    "code": "DYGAB33-240",
+    "col": 61
+  },
+  {
+    "name": "가위형 집게",
+    "code": "DYGA14A-250",
+    "col": 62
+  },
+  {
+    "name": "미니국자 블랙",
+    "code": "DYGEA10-210",
+    "col": 63
+  },
+  {
+    "name": "미니국자 그레이",
+    "code": "DYGEB10-210",
+    "col": 64
+  },
+  {
+    "name": "스탠딩집게 24",
+    "code": "DYGAD15-240",
+    "col": 65
+  },
+  {
+    "name": "스탠딩집게 30",
+    "code": "DYGAD15-300",
+    "col": 66
+  },
+  {
+    "name": "라운드헤드집게 25",
+    "code": "DYGAB15-240",
+    "col": 67
+  },
+  {
+    "name": "라운드헤드집게 30",
+    "code": "DYGAB15-300",
+    "col": 68
+  },
+  {
+    "name": "일자형집게 25",
+    "code": "DYGAA15-240",
+    "col": 69
+  },
+  {
+    "name": "일자형집게 30",
+    "code": "DYGAA15-300",
+    "col": 70
+  },
+  {
+    "name": "오프셋 26",
+    "code": "DYGAC15-260",
+    "col": 71
+  },
+  {
+    "name": "오프셋 30",
+    "code": "DYGAC15-300",
+    "col": 72
+  },
+  {
+    "name": "데코핀셋",
+    "code": "DYGAE15-115",
+    "col": 73
+  },
+  {
+    "name": "예담",
+    "code": "DYAS002B",
+    "col": 74
+  },
+  {
+    "name": "솔트",
+    "code": "DSAS005A",
+    "col": 75
+  },
+  {
+    "name": "토르 1.2리터",
+    "code": "DJCG012A",
+    "col": 76
+  },
+  {
+    "name": "믹싱볼 3종 세트",
+    "code": "DYGEB02-003",
+    "col": 77
+  },
+  {
+    "name": "깊은사각3p 23.5",
+    "code": "DYGEB31-230",
+    "col": 78
+  },
+  {
+    "name": "깊은사각3p 26",
+    "code": "DYGEB31-260",
+    "col": 79
+  },
+  {
+    "name": "깊은사각3p 31",
+    "code": "DYGEB31-310",
+    "col": 80
+  },
+  {
+    "name": "다용도 거치대 소",
+    "code": "",
+    "col": 81
+  },
+  {
+    "name": "다용도 거치대 중",
+    "code": "",
+    "col": 82
+  },
+  {
+    "name": "봉투 거치대",
+    "code": "",
+    "col": 83
+  },
+  {
+    "name": "수세미건조대 블랙",
+    "code": "DYHBA02-001",
+    "col": 84
+  },
+  {
+    "name": "수세미건조대 실버",
+    "code": "DYHBA01-001",
+    "col": 85
+  },
+  {
+    "name": "사각 멀티볼 소",
+    "code": "DYGEB45-032",
+    "col": 86
+  },
+  {
+    "name": "사각 멀티볼 중",
+    "code": "DYGEB45-042",
+    "col": 87
+  },
+  {
+    "name": "사각 멀티볼 대",
+    "code": "DYGEB45-056",
+    "col": 88
+  },
+  {
+    "name": "실속 믹싱볼 17cm",
+    "code": "DYGAA02-170",
+    "col": 89
+  },
+  {
+    "name": "실속 믹싱볼 19cm",
+    "code": "DYGAA02-190",
+    "col": 90
+  },
+  {
+    "name": "실속 믹싱볼 23cm",
+    "code": "DYGAA02-230",
+    "col": 91
+  },
+  {
+    "name": "실속 믹싱볼 25cm",
+    "code": "DYGAA02-250",
+    "col": 92
+  },
+  {
+    "name": "실속 믹싱볼 28cm",
+    "code": "DYGAA02-280",
+    "col": 93
+  },
+  {
+    "name": "무연마 케틀팟 1.5L",
+    "code": "DYAAA08-015",
+    "col": 94
+  },
+  {
+    "name": "무연마 케틀팟 2L",
+    "code": "DYAAA08-020",
+    "col": 95
+  }
+];
+const DAILY_RAW = {
+  "2026-04-30": {
+    "DYAAA08-020": 1,
+    "DYCBA02-030": 1,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 1,
+    "DYGEB31-230": 1,
+    "DYSG02B-002": 1
+  },
+  "2026-01-01": {},
+  "2026-01-02": {
+    "DYABA08-015": 1,
+    "DYABB08-020": 2,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 4,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 1,
+    "DYGAA31-006": 1,
+    "DYGAA31-003": 1,
+    "DYGEB10-210": 1
+  },
+  "2026-01-03": {},
+  "2026-01-04": {},
+  "2026-01-05": {
+    "DYABB08-020": 3,
+    "DYGEB34-230": 9,
+    "DYGEB34-260": 6,
+    "DYGEA31-315": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-070": 1,
+    "DYGEB17-280": 1,
+    "DYGAA31-006": 2,
+    "DYGS003A": 1,
+    "DDBG260A": 2,
+    "DYBHA01-260": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 3,
+    "DYEBB01-055": 1,
+    "DYGEB10-210": 3,
+    "DYGAD15-240": 1,
+    "DYGAD15-300": 1,
+    "DYGAB15-300": 1,
+    "DYGAA15-240": 1
+  },
+  "2026-01-06": {
+    "DYABB08-020": 3,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 4,
+    "DYGEA31-235": 1,
+    "DYGEA31-405": 1,
+    "DYGS003A": 1,
+    "DDAB240A": 1,
+    "DYGEA18-110": 1,
+    "DYEBB01-055": 2,
+    "DYEBC01-055": 2,
+    "DYGEB10-210": 1,
+    "DYGAD15-240": 1,
+    "DYGAB15-240": 1
+  },
+  "2026-01-07": {
+    "DYABA08-015": 1,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 1,
+    "DYEBB01-055": 1,
+    "DYGA14A-250": 1,
+    "DYGAB15-300": 1
+  },
+  "2026-01-08": {
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 4,
+    "DYGEA31-235": 2,
+    "DYGEA31-405": 1,
+    "DYABA09-090": 2,
+    "DYGEB17-280": 1,
+    "DYAE260A": 1,
+    "DYGS003A": 1,
+    "DYGEA18-110": 1
+  },
+  "2026-01-09": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 1,
+    "DYGEA31-315": 1,
+    "DYABA09-090": 2,
+    "DYGAA31-006": 1,
+    "DYGP026B": 1,
+    "DYGEA16-050": 1
+  },
+  "2026-01-10": {},
+  "2026-01-11": {},
+  "2026-01-12": {
+    "DYGEB34-230": 6,
+    "DYGEB34-260": 9,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DYGEB17-280": 1,
+    "DYGAA31-006": 2,
+    "DYSG02B-002": 1,
+    "DCAB01A-180": 2,
+    "DCAB02A-200": 2,
+    "DCAB02A-240": 2,
+    "DCAB03A-240": 2,
+    "DDAA180A": 2,
+    "DDAC240A": 1,
+    "DDBG260A": 1,
+    "DDBI220A": 1,
+    "DYGEA18-130": 1,
+    "DYGAB33-220": 1,
+    "DYGAB33-240": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1,
+    "DYGAB15-240": 2,
+    "DYGAA15-300": 2
+  },
+  "2026-01-13": {
+    "DYABB08-020": 2,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DDAA180A": 1,
+    "DDBG260A": 1,
+    "DYGAA20-045": 1,
+    "DYGAA20-085": 1,
+    "DYGEA18-130": 1
+  },
+  "2026-01-14": {
+    "DYABA08-020": 2,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYCBA02-015": 15,
+    "DYCBA02-050": 1,
+    "DYABA06-280": 1,
+    "DYGEB17-280": 1,
+    "DYAE260A": 1,
+    "DDAA180A": 1,
+    "DYGEA10-210": 2,
+    "DYGAE15-115": 1
+  },
+  "2026-01-15": {
+    "DYABA08-020": 1,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 2,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYGAA31-006": 1
+  },
+  "2026-01-16": {
+    "DYABB08-020": 2,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 3,
+    "DYGEA31-405": 3,
+    "DYABA09-090": 1,
+    "DYCBA02-050": 1,
+    "DYGAA31-006": 1,
+    "DYGEB10-210": 1
+  },
+  "2026-01-17": {},
+  "2026-01-18": {},
+  "2026-01-19": {
+    "DYABB08-020": 2,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 8,
+    "DYGEA31-235": 1,
+    "DYGEA31-315": 2,
+    "DYGEA31-405": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-050": 1,
+    "DYCBA02-070": 1,
+    "DYGAA31-006": 1,
+    "DYAE260A": 1,
+    "DYSG02A-002": 1,
+    "DDAA180A": 1,
+    "DYBHA01-260": 1,
+    "DYGEA18-110": 1,
+    "DYEBB01-055": 3,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1
+  },
+  "2026-01-20": {
+    "DYABB08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 2,
+    "DYGEA16-050": 1,
+    "DYGEA16-100": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 3
+  },
+  "2026-01-21": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 3,
+    "DYCBA02-050": 2,
+    "DYCBA02-070": 1,
+    "DYSG02A-002": 1,
+    "DYSG02B-002": 1,
+    "DYGEA16-100": 1,
+    "DYGA14A-250": 1,
+    "DYGAD15-240": 1,
+    "DYGAD15-300": 1
+  },
+  "2026-01-22": {
+    "DYABA08-020": 1,
+    "DYABB08-020": 2,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 2,
+    "DYAE260A": 1,
+    "DYGS003A": 1,
+    "DDAB240A": 1,
+    "DYEBB01-055": 4,
+    "DYEBC01-055": 1,
+    "DYGAB33-240": 1
+  },
+  "2026-01-23": {
+    "DYABA08-015": 1,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 2,
+    "DYGEA31-235": 4,
+    "DYGEA31-265": 2,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 2,
+    "DYGAA31-006": 1,
+    "DYGS003A": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1,
+    "DYGAD15-240": 2
+  },
+  "2026-01-24": {},
+  "2026-01-25": {},
+  "2026-01-26": {
+    "DYABA08-020": 5,
+    "DYABB08-020": 2,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 7,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 5,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-030": 2,
+    "DYCBA02-050": 5,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DYGAA31-006": 3,
+    "DYGAA31-003": 1,
+    "DCAB01A-180": 1,
+    "DVAA140A": 1,
+    "DDAB240A": 1,
+    "DDAC240A": 1,
+    "DDBG260A": 1,
+    "DDBI220A": 1,
+    "DYGEA16-100": 2,
+    "DYEBB01-055": 5,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 2,
+    "DYGEB10-210": 1,
+    "DYGAD15-240": 2,
+    "DYGAD15-300": 3
+  },
+  "2026-01-27": {
+    "DYABB08-020": 1,
+    "DYGEB34-260": 2,
+    "DYGEA31-315": 2,
+    "DYGEA31-405": 1,
+    "DYABA04-300": 2,
+    "DYGAA31-006": 1,
+    "DYGEA16-050": 3
+  },
+  "2026-01-28": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 2,
+    "DYABA04-260": 2,
+    "DYABA04-300": 3,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYSG02B-002": 1,
+    "DYGS003A": 1,
+    "DDAA180A": 1,
+    "DYGAB15-240": 1
+  },
+  "2026-01-29": {
+    "DYABB08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 4,
+    "DYGEA31-405": 3,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DYGAA31-006": 1,
+    "DCAB02A-240": 1,
+    "DYGEA16-100": 1,
+    "DYEBB01-055": 2,
+    "DYGAD15-240": 1
+  },
+  "2026-01-30": {
+    "DYGEB34-230": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 2,
+    "DYABA06-280": 1,
+    "DYSG02A-002": 1,
+    "DYSG02B-002": 1,
+    "DYGEA16-050": 1,
+    "DYGEA16-100": 1,
+    "DYGEA18-130": 1,
+    "DYGA14A-250": 1,
+    "DYGAD15-240": 1,
+    "DJCG012A": 1
+  },
+  "2026-01-31": {},
+  "2026-02-01": {},
+  "2026-02-02": {
+    "DYABA08-020": 1,
+    "DYABA08-015": 1,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 8,
+    "DYGEB34-260": 4,
+    "DYGEA31-235": 4,
+    "DYGEA31-265": 4,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-260": 1,
+    "DYABA04-300": 3,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 3,
+    "DYCBA02-050": 2,
+    "DYABA06-280": 1,
+    "DYGAA31-006": 2,
+    "DYGAA31-003": 3,
+    "DYAE260A": 2,
+    "DYGS003A": 1,
+    "DDAB240A": 1,
+    "DYGEA16-050": 2,
+    "DYGEA16-100": 1,
+    "DYEBB01-055": 1,
+    "DYEBC01-055": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 2,
+    "DYGAD15-240": 1,
+    "DJCG012A": 1
+  },
+  "2026-02-03": {
+    "DYABA08-020": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 1,
+    "DYABA04-300": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DDAA180A": 1,
+    "DYBHA01-260": 1,
+    "DYGEA18-110": 1,
+    "DYEBB01-055": 1,
+    "DYGA14A-250": 2,
+    "DYGEA10-210": 1
+  },
+  "2026-02-04": {
+    "DYABB08-020": 1,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 4,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 4,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DYSG02B-002": 1,
+    "DYGEA16-100": 1,
+    "DYEBB01-055": 2,
+    "DYGAC15-260": 2,
+    "DYGAE15-115": 2
+  },
+  "2026-02-05": {
+    "DYGEB34-260": 2,
+    "DYGEA31-265": 2,
+    "DYABA04-300": 4,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 2,
+    "DDAA180A": 1,
+    "DDBI220A": 1,
+    "DYGEA16-050": 2,
+    "DYGEB10-210": 1
+  },
+  "2026-02-06": {
+    "DYGEB34-260": 2,
+    "DYGEA31-235": 1,
+    "DYGEA31-315": 10,
+    "DYGEA31-405": 1,
+    "DYABA04-300": 1,
+    "DYCBA02-050": 1,
+    "DCAB02A-240": 1
+  },
+  "2026-02-07": {},
+  "2026-02-08": {},
+  "2026-02-09": {
+    "DYABA08-015": 1,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 11,
+    "DYGEA31-265": 3,
+    "DYGEA31-315": 4,
+    "DYGEA31-405": 3,
+    "DYABA04-260": 1,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-050": 2,
+    "DYCBA02-070": 2,
+    "DYABA06-280": 3,
+    "DYSG02B-002": 1,
+    "DCAB01A-180": 2,
+    "DCAB02A-200": 1,
+    "DDAA180A": 1,
+    "DYGAA20-045": 1,
+    "DYGAA20-065": 1,
+    "DYGEA16-050": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 1,
+    "DYEBC01-055": 1,
+    "DYGAB33-240": 1,
+    "DYGEA10-210": 6,
+    "DYGEB10-210": 1,
+    "DYGAD15-300": 1,
+    "DYGAA15-240": 2,
+    "DYGAE15-115": 1,
+    "DJCG012A": 1
+  },
+  "2026-02-10": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 2,
+    "DYGEA31-315": 4,
+    "DYGEA31-405": 2,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-070": 1,
+    "DYBHA01-260": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 2,
+    "DYGEA10-210": 1
+  },
+  "2026-02-11": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 6,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 3,
+    "DYGEA31-315": 2,
+    "DYGEA31-405": 2,
+    "DYABA09-090": 1,
+    "DYCBA02-030": 1,
+    "DYSG02A-002": 1,
+    "DYGS003A": 1,
+    "DYEBB01-055": 1,
+    "DYGEA10-210": 1,
+    "DYAS002B": 1
+  },
+  "2026-02-12": {},
+  "2026-02-13": {},
+  "2026-02-14": {},
+  "2026-02-15": {},
+  "2026-02-16": {},
+  "2026-02-17": {},
+  "2026-02-18": {},
+  "2026-02-19": {},
+  "2026-02-20": {
+    "DYABA08-020": 4,
+    "DYABB08-020": 1,
+    "DYGEB34-230": 10,
+    "DYGEB34-260": 11,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 1,
+    "DYABA04-260": 3,
+    "DYCBA02-030": 4,
+    "DYCBA02-050": 5,
+    "DYCBA02-070": 1,
+    "DYAE260A": 1,
+    "DYSG02A-002": 1,
+    "DYGP023B": 1,
+    "DYGP026B": 1,
+    "DYGS003A": 1,
+    "DCAB01A-180": 4,
+    "DCAB02A-200": 2,
+    "DCAB02A-240": 1,
+    "DVAB180A": 1,
+    "DDAA180A": 6,
+    "DDAB240A": 1,
+    "DDBG260A": 3,
+    "DYBHA01-200": 2,
+    "DYGEA16-050": 2,
+    "DYGEA18-130": 1,
+    "DYEBB01-055": 10,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 3,
+    "DYGEB10-210": 4,
+    "DYGAD15-300": 1,
+    "DYGAB15-300": 2,
+    "DYGAA15-240": 3,
+    "DYGAA15-300": 1,
+    "DYGAE15-115": 1,
+    "DYAS002B": 1,
+    "DSAS005A": 1
+  },
+  "2026-02-21": {},
+  "2026-02-22": {},
+  "2026-02-23": {
+    "DYABA08-020": 4,
+    "DYGEB34-230": 5,
+    "DYGEB34-260": 14,
+    "DYGEA31-265": 3,
+    "DYGEA31-405": 2,
+    "DYABA04-300": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYABA06-280": 1,
+    "DYAE260A": 1,
+    "DYGS003A": 1,
+    "DCAB02A-240": 2,
+    "DDAA180A": 2,
+    "DDAC240A": 1,
+    "DDBG260A": 1,
+    "DDBI220A": 1,
+    "DYGEA16-050": 5,
+    "DYEBB01-055": 4,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1,
+    "DYGAD15-300": 2,
+    "DYGAB15-300": 2,
+    "DYGAA15-240": 6
+  },
+  "2026-02-24": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEA31-235": 1,
+    "DYABA09-090": 2,
+    "DYCBA02-015": 1,
+    "DYGP026B": 1,
+    "DYGEA18-110": 1
+  },
+  "2026-02-25": {
+    "DYGEB34-230": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 11,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYSG02B-002": 1,
+    "DYBHA01-200": 1,
+    "DYBHA01-260": 1,
+    "DYBHA01-300": 1,
+    "DYGAD15-240": 1,
+    "DYGAE15-115": 1
+  },
+  "2026-02-26": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 3,
+    "DCAB02A-200": 1,
+    "DCAB03A-240": 1,
+    "DDAA180A": 1,
+    "DYGEA18-110": 1,
+    "DYGAC15-300": 1
+  },
+  "2026-02-27": {
+    "DYABA08-020": 1,
+    "DYGEB34-260": 3,
+    "DYGEA31-315": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-050": 2,
+    "DCAB01A-180": 1,
+    "DDAA180A": 1,
+    "DDAB240A": 1,
+    "DDAC240A": 1,
+    "DDBG260A": 1,
+    "DDBI220A": 1,
+    "DYGEA16-050": 1,
+    "DYGEA18-110": 1,
+    "DYEBB01-055": 4,
+    "DYGAB33-240": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1
+  },
+  "2026-02-28": {},
+  "2026-03-01": {},
+  "2026-03-02": {},
+  "2026-03-03": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 7,
+    "DYGEB34-260": 8,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 5,
+    "DYGEA31-315": 4,
+    "DYGEA31-405": 2,
+    "DYABA04-260": 1,
+    "DYABA04-300": 1,
+    "DYABA09-090": 2,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 3,
+    "DYGAA31-006": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 2,
+    "DYGS003A": 1,
+    "DCAB01A-180": 1,
+    "DCAB02A-240": 1,
+    "DYGEA16-100": 1,
+    "DYGEA18-130": 1,
+    "DYGEB10-210": 1,
+    "DYGAD15-300": 1,
+    "DYGAB15-240": 1,
+    "DYGAC15-260": 1,
+    "DYGAE15-115": 1,
+    "DJCG012A": 1
+  },
+  "2026-03-04": {
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 2,
+    "DYCBA02-030": 1,
+    "DCAB02A-240": 1,
+    "DYEBB01-055": 1,
+    "DYGA14A-250": 1
+  },
+  "2026-03-05": {
+    "DYGEB34-230": 2,
+    "DYGEA31-315": 1,
+    "DYBHA01-260": 1,
+    "DYGEA18-110": 1
+  },
+  "2026-03-06": {
+    "DYGEB34-230": 2,
+    "DYABA09-090": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-070": 1,
+    "DSAS005A": 1
+  },
+  "2026-03-07": {},
+  "2026-03-08": {},
+  "2026-03-09": {
+    "DYABA08-020": 3,
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 8,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-050": 3,
+    "DYGAA31-006": 2,
+    "DDAA180A": 1,
+    "DDAB240A": 1,
+    "DDAC240A": 2,
+    "DYEBB01-055": 2,
+    "DYGAB33-240": 1,
+    "DYGEA10-210": 1
+  },
+  "2026-03-10": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 2,
+    "DYGEA31-405": 10,
+    "DYSG02B-002": 1,
+    "DYGA14A-250": 1,
+    "DYGAA15-300": 1,
+    "DSAS005A": 1
+  },
+  "2026-03-11": {
+    "DYABA08-015": 1,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 5,
+    "DYGEA31-405": 3,
+    "DYCBA02-015": 2,
+    "DYCBA02-030": 1,
+    "DYSG02B-002": 1,
+    "DDBI220A": 1,
+    "DYGA14A-250": 1,
+    "DYGEB10-210": 2,
+    "DYGAD15-240": 1
+  },
+  "2026-03-12": {
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 3,
+    "DYGEA31-315": 5,
+    "DYCBA02-070": 1,
+    "DYGAA31-006": 1,
+    "DCAB01A-180": 1,
+    "DCAB02A-200": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1,
+    "DYGAA15-300": 6
+  },
+  "2026-03-13": {
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 4,
+    "DYABA04-300": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 2,
+    "DYCBA02-050": 2,
+    "DYABA06-280": 1,
+    "DVAB180A": 1,
+    "DVAB240A": 1,
+    "DVAC240A": 1,
+    "DYGEA16-100": 1,
+    "DYEBB01-055": 3,
+    "DYGAA15-300": 1
+  },
+  "2026-03-14": {
+    "DYABA08-020": 1,
+    "DYABB08-020": 1,
+    "DYABS08-004": 2,
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 10,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 2,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 2,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 2,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 2,
+    "DYGAA31-006": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 1,
+    "DYGP026B": 1,
+    "DYGS003A": 1,
+    "DCAB02A-200": 1,
+    "DDAA180A": 3,
+    "DYGAA20-065": 1,
+    "DYGEA16-100": 2,
+    "DYGEA18-110": 3,
+    "DYGEA18-130": 1,
+    "DYEBC01-055": 1,
+    "DYGAB33-240": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1,
+    "DYGEB02-003": 2,
+    "DYGEB31-230": 1,
+    "DYGEB31-260": 2
+  },
+  "2026-03-15": {
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-300": 1,
+    "DYCBA02-015": 2,
+    "DYCBA02-050": 1,
+    "DYGAA31-003": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 3,
+    "DYGAA20-065": 1,
+    "DYGEA18-130": 1,
+    "DYGA14A-250": 1
+  },
+  "2026-03-16": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-405": 3,
+    "DYCBA02-015": 2,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYGEB17-280": 1,
+    "DVAB180A": 2,
+    "DDAA180A": 1,
+    "DYEBA01-055": 2,
+    "DYEBB01-055": 2
+  },
+  "2026-03-17": {
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-300": 1,
+    "DYCBA02-015": 2,
+    "DYCBA02-050": 1,
+    "DYGAA31-003": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 3,
+    "DYGAA20-065": 1,
+    "DYGEA18-130": 1,
+    "DYGA14A-250": 1
+  },
+  "2026-03-18": {
+    "DYGEB34-230": 1,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYABA09-090": 1,
+    "DYSG02B-002": 1,
+    "DDAA180A": 2,
+    "DYGAB33-220": 1,
+    "DYGEB31-230": 1
+  },
+  "2026-03-19": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-405": 3,
+    "DYCBA02-015": 2,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYGEB17-280": 1,
+    "DVAB180A": 2,
+    "DDAA180A": 1,
+    "DYEBA01-055": 2,
+    "DYEBB01-055": 2
+  },
+  "2026-03-20": {
+    "DYGEB34-230": 1,
+    "DYABA09-090": 2,
+    "DYCBA02-015": 1,
+    "DYCBA02-070": 1,
+    "DYGEB17-280": 1,
+    "DYSG02B-002": 2,
+    "DYGP023B": 1,
+    "DDAA180A": 1,
+    "DYBHA01-260": 1,
+    "DYGEA10-210": 2
+  },
+  "2026-03-21": {},
+  "2026-03-22": {},
+  "2026-03-23": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 9,
+    "DYGEA31-235": 5,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 3,
+    "DYGEB17-280": 6,
+    "DYAE260A": 1,
+    "DYSG02B-002": 3,
+    "DDBI220A": 1,
+    "DYGEA18-110": 2,
+    "DYGEA18-130": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 1,
+    "DYGAD15-240": 1,
+    "DYGAA15-240": 1,
+    "DYGAA15-300": 1,
+    "DYGEB31-310": 1
+  },
+  "2026-03-24": {
+    "DYGEB34-260": 6,
+    "DYGEA31-265": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-300": 2,
+    "DYCBA02-050": 1,
+    "DCAB01A-180": 1,
+    "DYGEA18-130": 1,
+    "DYEBB01-055": 1,
+    "DYEBC01-055": 1,
+    "DYGA14A-250": 1,
+    "DYGAD15-240": 1,
+    "DYGAB15-300": 1
+  },
+  "2026-03-25": {
+    "DYABS08-004": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 4,
+    "DYGEA31-315": 1,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-070": 1,
+    "DYSG02A-002": 2,
+    "DYSG02B-002": 1,
+    "DYGS003A": 1,
+    "DYGEB02-003": 1
+  },
+  "2026-03-26": {
+    "DYABA08-020": 2,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 5,
+    "DYABA04-260": 1,
+    "DYABA04-300": 1,
+    "DYCBA02-030": 3,
+    "DYCBA02-050": 1,
+    "DYCBA02-070": 1,
+    "DYGEB17-280": 1,
+    "DYGAA31-003": 1,
+    "DYSG02B-002": 1,
+    "DDAA180A": 2,
+    "DYGEA18-130": 1,
+    "DYGEB10-210": 1,
+    "DYGEB31-260": 2
+  },
+  "2026-03-27": {
+    "DYABS08-004": 1,
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 1,
+    "DYGEA31-405": 1,
+    "DYCBA02-015": 2,
+    "DYAE260A": 1,
+    "DYSG02B-002": 1,
+    "DDBI220A": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 2,
+    "DYGA14A-250": 1,
+    "DYGEB10-210": 1
+  },
+  "2026-03-28": {},
+  "2026-03-29": {},
+  "2026-03-30": {
+    "DYABA08-015": 1,
+    "DYABS08-004": 1,
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 5,
+    "DYGEA31-235": 2,
+    "DYGEA31-315": 2,
+    "DYGEA31-405": 2,
+    "DYABA04-260": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 2,
+    "DYCBA02-050": 1,
+    "DYGEB17-280": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 1,
+    "DCAB01A-180": 2,
+    "DCAB02A-200": 1,
+    "DDAA180A": 2,
+    "DDAB240A": 2,
+    "DDAC240A": 1,
+    "DDBG260A": 1,
+    "DYGEA16-050": 1,
+    "DYGEA16-100": 1,
+    "DYGEA18-110": 2,
+    "DYGEA18-130": 1,
+    "DYEBB01-055": 1,
+    "DYEBC01-055": 1,
+    "DYGA14A-250": 1,
+    "DYGEA10-210": 3,
+    "DYGEB10-210": 2,
+    "DYGAD15-240": 1,
+    "DYGAB15-240": 1,
+    "DYGAA15-240": 1,
+    "DYGEB02-003": 3
+  },
+  "2026-03-31": {
+    "DYABA08-020": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-315": 2,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 3,
+    "DYSG02B-002": 3,
+    "DCAB02A-240": 1,
+    "DYGEA10-210": 1
+  },
+  "2026-04-01": {
+    "DYABA08-020": 1,
+    "DYABA08-015": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 4,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 1,
+    "DYGAA31-006": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 2,
+    "DDAB240A": 1,
+    "DYGEA18-110": 1,
+    "DYGAD15-240": 1
+  },
+  "2026-04-02": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 1,
+    "DYCBA02-030": 1,
+    "DYABA06-280": 2,
+    "DYGEB17-280": 2,
+    "DYSG02B-002": 2,
+    "DCAB01A-180": 1,
+    "DDAA180A": 2,
+    "DDAB240A": 1,
+    "DDBG260A": 1,
+    "DDBI220A": 1,
+    "DYGEA18-130": 1,
+    "DYGAB15-300": 2
+  },
+  "2026-04-03": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 2,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-030": 1,
+    "DYGEB17-280": 2,
+    "DYAE260A": 1,
+    "DDAA180A": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 1
+  },
+  "2026-04-04": {},
+  "2026-04-05": {},
+  "2026-04-06": {
+    "DYABA08-020": 1,
+    "DYABS08-004": 3,
+    "DYGEB34-230": 6,
+    "DYGEB34-260": 3,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYABA04-300": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 2,
+    "DYCBA02-070": 1,
+    "DYABA06-280": 1,
+    "DYGEB17-280": 1,
+    "DYGAA31-003": 1,
+    "DYAE260A": 1,
+    "DYSG02A-002": 1,
+    "DYSG02B-002": 1,
+    "DYGP023B": 1,
+    "DYEBC01-055": 4,
+    "DYGA14A-250": 2,
+    "DYGEA10-210": 2,
+    "DYGEB10-210": 2,
+    "DYGAB15-240": 1,
+    "DYGAA15-240": 2,
+    "DSAS005A": 3
+  },
+  "2026-04-07": {
+    "DYGEB34-230": 2,
+    "DYGEA31-235": 1,
+    "DYGEB17-280": 1,
+    "DYSG02B-002": 1,
+    "DDBI220A": 1
+  },
+  "2026-04-08": {
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 2,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYGAA31-006": 1,
+    "DVAA140A": 1,
+    "DDAB240A": 1,
+    "DYGA14A-250": 1,
+    "DYGEB10-210": 1,
+    "DYGAD15-240": 1,
+    "DYGAB15-240": 1,
+    "DYGEB31-310": 1
+  },
+  "2026-04-09": {
+    "DYABS08-004": 1,
+    "DYGEB34-230": 1,
+    "DYABA04-260": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-050": 1,
+    "DYABA06-280": 1,
+    "DDAA180A": 1,
+    "DDBI220A": 1,
+    "DYGEA10-210": 1,
+    "DYGEB10-210": 1,
+    "DYGAB15-240": 1,
+    "DYGEB02-003": 1
+  },
+  "2026-04-10": {
+    "DYABA08-020": 1,
+    "DYABS08-004": 1,
+    "DYCBA02-050": 1,
+    "DYGEA10-210": 1,
+    "DYGAB15-240": 1
+  },
+  "2026-04-11": {},
+  "2026-04-12": {},
+  "2026-04-13": {
+    "DYABA08-020": 1,
+    "DYABS08-004": 2,
+    "DYGEB34-230": 4,
+    "DYGEB34-260": 7,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 3,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 2,
+    "DYCBA02-030": 2,
+    "DYCBA02-070": 1,
+    "DYGEB17-280": 2,
+    "DYGAA31-006": 1,
+    "DYAE260A": 1,
+    "DYSG02A-002": 1,
+    "DYSG02B-002": 2,
+    "DYGS003A": 1,
+    "DVAB240A": 1,
+    "DYGEA18-130": 3,
+    "DYEBA01-055": 1,
+    "DYEBC01-055": 4,
+    "DYGA14A-250": 3,
+    "DYGEB10-210": 7,
+    "DYGAD15-240": 1,
+    "DYGAD15-300": 1,
+    "DYGEB02-003": 1,
+    "DYGEB31-310": 1
+  },
+  "2026-04-14": {
+    "DYABA08-020": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 3,
+    "DYGEA31-265": 2,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 1,
+    "DYCBA02-050": 2,
+    "DYSG02A-002": 1,
+    "DYGEA16-050": 2,
+    "DYGEA16-100": 1,
+    "DSAS005A": 1
+  },
+  "2026-04-15": {
+    "DYABA08-020": 2,
+    "DYABS08-004": 1,
+    "DYGEB34-260": 2,
+    "DYGEA31-235": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 3,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-070": 1,
+    "DYGEA16-050": 3,
+    "DYGEA16-100": 1,
+    "DYEBA01-055": 4,
+    "DSAS005A": 1,
+    "DYGEB02-003": 1
+  },
+  "2026-04-16": {
+    "DYABA08-020": 1,
+    "DYABB08-020": 1,
+    "DYABS08-004": 1,
+    "DYGEB34-230": 4,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 2,
+    "DYCBA02-050": 1,
+    "DYGEB17-280": 1,
+    "DYSG02B-002": 2,
+    "DYGP020A": 1,
+    "DCAB01A-180": 1,
+    "DCAB02A-200": 1,
+    "DCAB03A-240": 1,
+    "DYGEB10-210": 1,
+    "DYGAB15-240": 2,
+    "DYGAB15-300": 1
+  },
+  "2026-04-17": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 1,
+    "DYGEA31-405": 3,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 2,
+    "DYGAA31-006": 1,
+    "DYSG02B-002": 1,
+    "DYGEA18-130": 1,
+    "DYGEA10-210": 1,
+    "DYGAD15-240": 1
+  },
+  "2026-04-18": {},
+  "2026-04-19": {},
+  "2026-04-20": {
+    "DYABA08-020": 1,
+    "DYABB08-020": 1,
+    "DYABS08-004": 1,
+    "DYGEB34-230": 7,
+    "DYGEB34-260": 2,
+    "DYGEA31-235": 8,
+    "DYGEA31-265": 3,
+    "DYGEA31-315": 2,
+    "DYABA09-090": 2,
+    "DYCBA02-050": 2,
+    "DYCBA02-070": 1,
+    "DYGEB17-280": 1,
+    "DYSG02A-002": 2,
+    "DYSG02B-002": 2,
+    "DYGS003A": 1,
+    "DDAA180A": 1,
+    "DDBG260A": 1,
+    "DYGEA16-100": 2,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 1,
+    "DYEBB01-055": 1,
+    "DYGA14A-250": 2,
+    "DYGAB15-300": 1,
+    "DYGEB02-003": 6,
+    "DYGEB31-230": 1,
+    "DYGEB31-260": 1
+  },
+  "2026-04-21": {
+    "DYGEB34-230": 1,
+    "DYGEB34-260": 3,
+    "DYCBA02-015": 1,
+    "DYCBA02-030": 1,
+    "DYCBA02-050": 1,
+    "DYAE260A": 1,
+    "DYSG02B-002": 2,
+    "DYGP023B": 1,
+    "DYGP026B": 1,
+    "DYEBB01-055": 2,
+    "DYGAD15-240": 1,
+    "DYGEB31-310": 1
+  },
+  "2026-04-22": {
+    "DYABB08-020": 2,
+    "DYGEB34-230": 3,
+    "DYGEB34-260": 2,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 3,
+    "DYGEA31-405": 4,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-070": 1,
+    "DYSG02B-002": 1,
+    "DCAB01A-180": 1,
+    "DDAA180A": 1,
+    "DDBG260A": 1
+  },
+  "2026-04-23": {
+    "DYABA08-020": 1,
+    "DYABS08-004": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-405": 6,
+    "DYGP020A": 1,
+    "DDAA180A": 1,
+    "DDBG260A": 1
+  },
+  "2026-04-24": {
+    "DYABS08-004": 1,
+    "DYGEB34-260": 3,
+    "DYABA04-300": 1,
+    "DYCBA02-030": 3,
+    "DYGEB17-280": 1,
+    "DYSG02A-002": 1,
+    "DYSG02B-002": 2,
+    "DYGP023B": 1,
+    "DDAA180A": 1,
+    "DYGEA16-050": 1,
+    "DYGEA16-100": 1,
+    "DYGAD15-240": 20,
+    "DYGEB02-003": 1
+  },
+  "2026-04-25": {},
+  "2026-04-26": {},
+  "2026-04-29": {
+    "DDAA180A": 1,
+    "DYABA08-020": 1,
+    "DYABS08-004": 3,
+    "DYCBA02-015": 1,
+    "DYCBA02-070": 2,
+    "DYGAD15-240": 1,
+    "DYGEA31-265": 1,
+    "DYGEA31-315": 2,
+    "DYGEA31-405": 1,
+    "DYGEB10-210": 1,
+    "DYGEB34-230": 1,
+    "DYSG02B-002": 1
+  },
+  "2026-04-28": {
+    "DSAS005A": 1,
+    "DYABA04-300": 1,
+    "DYABA09-090": 1,
+    "DYCBA02-015": 1,
+    "DYCBA02-050": 1,
+    "DYCBA02-070": 1,
+    "DYGA14A-250": 1,
+    "DYGEA18-110": 1,
+    "DYGEA18-130": 1,
+    "DYGEA31-265": 3,
+    "DYGEB17-280": 1,
+    "DYGEB31-230": 1,
+    "DYGEB34-260": 1
+  },
+  "2026-04-27": {
+    "DCAB02A-200": 1,
+    "DYCBA02-030": 2,
+    "DYCBA02-050": 5,
+    "DYCBA02-070": 1,
+    "DYEBB01-055": 3,
+    "DYEBC01-055": 2,
+    "DYGEA16-050": 1,
+    "DYGEA16-100": 3,
+    "DYGEA18-110": 1,
+    "DYGEA31-235": 1,
+    "DYGEA31-265": 1,
+    "DYGEB02-003": 2,
+    "DYGEB17-280": 1,
+    "DYGEB31-310": 1,
+    "DYGEB34-230": 2,
+    "DYGEB34-260": 3,
+    "DYSG02B-002": 1
+  }
+};
+const YEARS = ['2026','2027','2028','2029','2030'];
+const KEY_MAP = {};
+PRODUCTS.forEach(p=>{KEY_MAP[p.code||p.name]=p;});
+let dailyData = JSON.parse(JSON.stringify(DAILY_RAW));
+
+// 뒤로가기 스택 (최대 5개)
+let undoStack = [];
+
+function getKey(p){return p.code||p.name;}
+function getDayTotal(date){return Object.values(dailyData[date]||{}).reduce((s,v)=>s+v,0);}
+function getProductTotal(p,yf){
+  const key=getKey(p);
+  return Object.keys(dailyData).filter(d=>yf?d.startsWith(yf):true).reduce((s,d)=>s+(dailyData[d][key]||0),0);
+}
+function getProductMonthTotal(p,ym){
+  const key=getKey(p);
+  return Object.keys(dailyData).filter(d=>d.startsWith(ym)).reduce((s,d)=>s+(dailyData[d][key]||0),0);
+}
+function getMonths(year){
+  const s=new Set();
+  Object.keys(dailyData).filter(d=>year?d.startsWith(year):true).forEach(d=>s.add(d.slice(0,7)));
+  return [...s].sort();
+}
+function getYears(){const s=new Set();Object.keys(dailyData).forEach(d=>s.add(d.slice(0,4)));return [...s].sort();}
+function getLatestDate(){const dates=Object.keys(dailyData).filter(d=>getDayTotal(d)>0).sort();return dates[dates.length-1]||'';}
+function getLatestYear(){return getLatestDate().slice(0,4)||'2026';}
+function getLatestMonth(){const ld=getLatestDate();return ld?ld.slice(0,7):'';}
+function fmtDate(d){return d.replace(/^20(\d\d)-(\d\d)-(\d\d)$/,'$1$2$3');}
+
+function refreshAll(){
+  initSummary();initMonthBtns();initChartRangeBtns();initChartPeriodSelect();
+  renderDaily();renderMonthly();renderYearly();renderChart();
+}
+
+function syncScroll(wrapId,topId,innerId){
+  const wrap=document.getElementById(wrapId);
+  const top=document.getElementById(topId);
+  const inner=document.getElementById(innerId);
+  if(!wrap||!top||!inner) return;
+  const update=()=>{inner.style.width=wrap.scrollWidth+'px';};
+  update();
+  new ResizeObserver(update).observe(wrap);
+  let lock=false;
+  top.addEventListener('scroll',()=>{if(lock)return;lock=true;wrap.scrollLeft=top.scrollLeft;lock=false;});
+  wrap.addEventListener('scroll',()=>{if(lock)return;lock=true;top.scrollLeft=wrap.scrollLeft;lock=false;});
+}
+
+function initSummary(){
+  const ly=getLatestYear();
+  document.getElementById('label-total').textContent=ly+'년 누적 합계';
+  document.getElementById('sum-total').textContent=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,ly),0).toLocaleString();
+  document.getElementById('sum-products').textContent=PRODUCTS.length;
+  const lm=getLatestMonth();
+  if(lm){
+    document.getElementById('label-month').textContent=lm.split('-')[1]+'월 합계';
+    document.getElementById('sum-month').textContent=PRODUCTS.reduce((s,p)=>s+getProductMonthTotal(p,lm),0).toLocaleString();
+    document.getElementById('sub-month').textContent=lm+' 누적';
+  }
+  const ld=getLatestDate();
+  if(ld){
+    document.getElementById('label-today').textContent=fmtDate(ld)+' 판매';
+    document.getElementById('sum-today').textContent=getDayTotal(ld).toLocaleString();
+    document.getElementById('last-update').textContent='최근 업데이트: '+fmtDate(ld);
+  }
+}
+
+let chartSearchQuery = '';
+function searchChart(){
+  const q = document.getElementById('chart-search-input').value.trim();
+  if(q.length < 2){ alert('2글자 이상 입력해 주세요.'); return; }
+  chartSearchQuery = q;
+  document.getElementById('chart-search-clear').style.display = 'inline-block';
+  renderChart();
+}
+function clearSearch(){
+  chartSearchQuery = '';
+  document.getElementById('chart-search-input').value = '';
+  document.getElementById('chart-search-clear').style.display = 'none';
+  renderChart();
+}
+
+let chartRange='top100days';
+function getTop100DaysTotal(p){
+  // 최근 100일 날짜 계산
+  const allDates=Object.keys(dailyData).filter(d=>getDayTotal(d)>=0).sort().reverse();
+  const recent=allDates.slice(0,100);
+  const key=getKey(p);
+  return recent.reduce((s,d)=>s+(dailyData[d][key]||0),0);
+}
+function setChartRange(r,btn){
+  chartRange=r;
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+function initChartRangeBtns(){
+  const activeYears=getYears();
+  const currentYear=getLatestYear();
+  const pastYears=activeYears.filter(y=>y!==currentYear);
+  const currentMonths=getMonths(currentYear).slice().reverse();
+
+  let btns=[{r:'top100days',label:'최근 100일 TOP20'}];
+  // 현재 연도 누계
+  btns.push({r:'year_'+currentYear, label:currentYear+'년'});
+  // 현재 연도 월별 (최신 월 먼저)
+  currentMonths.forEach(ym=>{
+    const m=ym.split('-')[1];
+    btns.push({r:'month_'+ym, label:m+'월'});
+  });
+  // 과거 연도 버튼 (년도만 표시)
+  pastYears.sort().reverse().forEach(y=>{
+    btns.push({r:'year_'+y, label:y+'년'});
+  });
+
+  const container=document.getElementById('chart-range-btns');
+  container.innerHTML=btns.map(b=>`<button class="toggle-btn${chartRange===b.r?' active':''}" onclick="setChartRange('${b.r}',this)">${b.label}</button>`).join('');
+}
+function initChartPeriodSelect(){
+  // 누계 드롭다운: 2026~2030
+  const sel=document.getElementById('chart-period');
+  const cur=sel.value;
+  sel.innerHTML='';
+  YEARS.forEach(y=>{sel.innerHTML+=`<option value="cumul_${y}">${y}년 누계</option>`;});
+  // 현재 chartRange가 cumul이면 유지, 아니면 선택 안 함
+  if(cur&&cur.startsWith('cumul_')) sel.value=cur;
+  sel.onchange=()=>{
+    chartRange=sel.value;
+    // 버튼 active 해제
+    document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+    renderChart();
+  };
+}
+function renderChart(){
+  // chartRange에 따라 데이터 결정
+  let getVal, topN=null, title='';
+  if(chartRange==='top100days'){
+    getVal=p=>getTop100DaysTotal(p);
+    topN=20;
+  } else if(chartRange.startsWith('year_')){
+    const y=chartRange.slice(5);
+    getVal=p=>getProductTotal(p,y);
+  } else if(chartRange.startsWith('month_')){
+    const ym=chartRange.slice(6);
+    getVal=p=>getProductMonthTotal(p,ym);
+  } else if(chartRange.startsWith('cumul_')){
+    const y=chartRange.slice(6);
+    getVal=p=>getProductTotal(p,y);
+  } else {
+    getVal=p=>getProductTotal(p);
+  }
+
+  let prods=[...PRODUCTS].sort((a,b)=>getVal(b)-getVal(a));
+  if(chartSearchQuery){
+    prods=prods.filter(p=>p.name.includes(chartSearchQuery)||p.code.includes(chartSearchQuery));
+  } else if(topN){
+    prods=prods.slice(0,topN);
+  }
+  const maxVal=Math.max(...prods.map(p=>getVal(p)),1);
+  document.getElementById('chart-container').innerHTML=prods.map((p,i)=>{
+    const v=getVal(p),pct=v/maxVal;
+    const bc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    return `<div class="chart-row">
+      <div class="chart-rank">${i+1}위</div>
+      <div class="chart-label" title="${p.name}">${p.name}</div>
+      <div class="chart-bar-wrap">
+        <div class="chart-bar ${bc}" style="width:calc(${pct.toFixed(4)} * (100% - 50px))"></div>
+        <div class="chart-val">${v}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMonthly(){
+  const ly=getLatestYear(),months=getMonths(ly).slice().reverse();
+  const sort=document.getElementById('monthly-sort').value;
+  const rankMap={};
+  [...PRODUCTS].sort((a,b)=>getProductTotal(b,ly)-getProductTotal(a,ly)).forEach((p,i)=>{rankMap[getKey(p)]=i+1;});
+  let prods=[...PRODUCTS];
+  if(sort==='total-desc') prods.sort((a,b)=>getProductTotal(b,ly)-getProductTotal(a,ly));
+  else if(sort==='total-asc') prods.sort((a,b)=>getProductTotal(a,ly)-getProductTotal(b,ly));
+  else prods.sort((a,b)=>a.name.localeCompare(b.name));
+
+  // 월별 바 그래프 (1~12월 고정, 세로형, px 직접 계산)
+  const allMonths=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const monthTotals=allMonths.map(m=>{
+    const ym=ly+'-'+m;
+    return PRODUCTS.reduce((s,p)=>s+getProductMonthTotal(p,ym),0);
+  });
+  const maxMonthVal=Math.max(...monthTotals,1);
+  const BAR_MAX_H=160; // px
+  const latestM=getLatestMonth().split('-')[1];
+  document.getElementById('monthly-bar-chart').innerHTML=
+    `<h3>${ly}년 월별 판매량</h3>
+    <div class="mbc-cols">`+
+    allMonths.map((m,i)=>{
+      const v=monthTotals[i];
+      const barH=v>0?Math.max(Math.round(v/maxMonthVal*BAR_MAX_H),4):0;
+      const isCurrent=m===latestM;
+      const isEmpty=v===0;
+      return `<div class="mbc-col">
+        <div class="mbc-val">${v||''}</div>
+        <div class="mbc-bar${isCurrent?' current':''}${isEmpty?' empty':''}" style="height:${barH}px"></div>
+        <div class="mbc-label">${parseInt(m)}월</div>
+      </div>`;
+    }).join('')+
+    `</div>`;
+
+  // 테이블 - 합계 열도 sticky
+  document.getElementById('monthly-thead').innerHTML=
+    '<tr><th class="col-rank">순위</th><th class="col-name">품목명</th><th class="col-monthtotal">합계</th>'+
+    months.map(ym=>`<th>${ym.split('-')[1]}월</th>`).join('')+'</tr>';
+  const gt=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,ly),0);
+  let rows=`<tr class="total-row"><td class="col-rank"></td><td class="col-name">합계</td><td class="col-monthtotal num">${gt.toLocaleString()}</td>
+    ${months.map(ym=>{const v=PRODUCTS.reduce((s,p)=>s+getProductMonthTotal(p,ym),0);return `<td class="num">${v.toLocaleString()}</td>`;}).join('')}</tr>`;
+  prods.forEach(p=>{
+    const total=getProductTotal(p,ly),rank=rankMap[getKey(p)];
+    const rc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    rows+=`<tr><td class="col-rank"><span class="rank-num ${rc}">${rank}</span></td>
+      <td class="col-name" title="${p.name}">${p.name}</td><td class="col-monthtotal num">${total||'-'}</td>
+      ${months.map(ym=>{const v=getProductMonthTotal(p,ym);return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}</tr>`;
+  });
+  document.getElementById('monthly-tbody').innerHTML=rows;
+  setTimeout(()=>syncScroll('monthly-table-wrap','monthly-scroll-top','monthly-scroll-inner'),100);
+  const recentMonths=months.slice(0,3);
+  document.getElementById('monthly-mobile').innerHTML=prods.map(p=>{
+    const total=getProductTotal(p,ly),rank=rankMap[getKey(p)];
+    const bc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    const bgColor=bc==='gold'?'#f5a623':bc==='silver'?'#9b9b9b':bc==='bronze'?'#c47c3a':'#eee';
+    return `<div style="background:white;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:700;flex:1;margin-right:8px;">${p.name}</div>
+        <span style="background:${bgColor};color:${bc?'white':'#888'};font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px;">${rank}위</span>
+        <div style="font-size:18px;font-weight:700;color:#4a90e2;margin-left:8px;">${total}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        ${recentMonths.map(ym=>{const m=ym.split('-')[1];const v=getProductMonthTotal(p,ym);
+          return `<div style="background:#f5f6fa;border-radius:6px;padding:6px;text-align:center;">
+            <div style="font-size:10px;color:#888;">${m}월</div>
+            <div style="font-size:14px;font-weight:700;color:${v?'#1a1a2e':'#ddd'};">${v||'-'}</div></div>`;
+        }).join('')}
+      </div></div>`;
+  }).join('');
+}
+
+function renderYearly(){
+  const activeYears=getYears(),currentYear=getLatestYear();
+  const sort=document.getElementById('yearly-sort').value;
+  const rankMap={};
+  [...PRODUCTS].sort((a,b)=>getProductTotal(b)-getProductTotal(a)).forEach((p,i)=>{rankMap[getKey(p)]=i+1;});
+  let prods=[...PRODUCTS];
+  if(sort==='total-desc') prods.sort((a,b)=>getProductTotal(b)-getProductTotal(a));
+  else if(sort==='total-asc') prods.sort((a,b)=>getProductTotal(a)-getProductTotal(b));
+  else prods.sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('year-cards').innerHTML=YEARS.map(y=>{
+    const total=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,y),0);
+    const hasData=activeYears.includes(y),isCurrent=y===currentYear;
+    return `<div class="year-card ${hasData?'has-data':''} ${isCurrent?'current':''}">
+      <div class="y-year">${y}년</div><div class="y-total">${total.toLocaleString()}</div>
+      <div class="y-sub">${hasData?'데이터 있음':'데이터 없음'}</div></div>`;
+  }).join('');
+  document.getElementById('yearly-thead').innerHTML=
+    '<tr><th class="col-rank">순위</th><th class="col-name">품목명</th>'+
+    YEARS.map(y=>`<th>${y}년</th>`).join('')+'<th>전체 합계</th></tr>';
+  const gt=PRODUCTS.reduce((s,p)=>s+getProductTotal(p),0);
+  let rows=`<tr class="total-row"><td class="col-rank"></td><td class="col-name">합계</td>
+    ${YEARS.map(y=>{const v=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,y),0);return `<td class="num">${v.toLocaleString()}</td>`;}).join('')}
+    <td class="num">${gt.toLocaleString()}</td></tr>`;
+  prods.forEach(p=>{
+    const total=getProductTotal(p),rank=rankMap[getKey(p)];
+    const rc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    rows+=`<tr><td class="col-rank"><span class="rank-num ${rc}">${rank}</span></td>
+      <td class="col-name" title="${p.name}">${p.name}</td>
+      ${YEARS.map(y=>{const v=getProductTotal(p,y);return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}
+      <td class="num">${total||'-'}</td></tr>`;
+  });
+  document.getElementById('yearly-tbody').innerHTML=rows;
+  setTimeout(()=>syncScroll('yearly-table-wrap','yearly-scroll-top','yearly-scroll-inner'),100);
+  document.getElementById('yearly-mobile').innerHTML=prods.map(p=>{
+    const total=getProductTotal(p),rank=rankMap[getKey(p)];
+    const bc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    const bgColor=bc==='gold'?'#f5a623':bc==='silver'?'#9b9b9b':bc==='bronze'?'#c47c3a':'#eee';
+    return `<div style="background:white;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:700;flex:1;margin-right:8px;">${p.name}</div>
+        <span style="background:${bgColor};color:${bc?'white':'#888'};font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px;">${rank}위</span>
+        <div style="font-size:18px;font-weight:700;color:#4a90e2;margin-left:8px;">${total||'-'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        ${activeYears.map(y=>{const v=getProductTotal(p,y);
+          return `<div style="background:#f5f6fa;border-radius:6px;padding:6px;text-align:center;">
+            <div style="font-size:10px;color:#888;">${y}년</div>
+            <div style="font-size:14px;font-weight:700;color:${v?'#1a1a2e':'#ddd'};">${v||'-'}</div></div>`;
+        }).join('')}
+      </div></div>`;
+  }).join('');
+}
+
+let currentMonth='';
+function initMonthBtns(){
+  const months=getMonths().slice().reverse(); // 최신 월 먼저
+  const latestYm=months[0]||'';
+  // currentMonth가 없거나 존재하지 않는 월이면 최신 월로 설정
+  if(!currentMonth || !months.includes(currentMonth)) currentMonth=latestYm;
+  const c=document.getElementById('month-btns');
+  c.innerHTML='<button class="mbtn'+(currentMonth===''?' active':'')+'" onclick="filterMonth(\'\',this)">전체</button>';
+  months.forEach(ym=>{
+    const [y,m]=ym.split('-');
+    const isActive=currentMonth===ym;
+    c.innerHTML+=`<button class="mbtn${isActive?' active':''}" onclick="filterMonth('${ym}',this)">${y.slice(2)}년 ${m}월</button>`;
+  });
+}
+function filterMonth(ym,btn){
+  currentMonth=ym;
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDaily();
+}
+function renderDaily(){
+  let allDates=Object.keys(dailyData).sort();
+  if(currentMonth) allDates=allDates.filter(d=>d.startsWith(currentMonth));
+  const groups={};
+  allDates.forEach(d=>{const ym=d.slice(0,7);if(!groups[ym])groups[ym]=[];groups[ym].push(d);});
+  const sortedYMs=Object.keys(groups).sort().reverse();
+  document.getElementById('daily-thead').innerHTML=
+    '<tr><th class="col-date">날짜</th><th class="col-subtotal">합계</th>'+
+    PRODUCTS.map(p=>`<th title="${p.name}">${p.name.length>6?p.name.slice(0,6)+'…':p.name}</th>`).join('')+'</tr>';
+  let rows='';
+  if(!currentMonth){
+    getYears().sort().reverse().forEach(y=>{
+      const yT=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,y),0);
+      rows+=`<tr class="year-total-row"><td class="col-date">🏆 ${y}년 합계</td><td class="col-subtotal">${yT.toLocaleString()}</td>
+        ${PRODUCTS.map(p=>{const v=getProductTotal(p,y);return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}</tr>`;
+    });
+  }
+  sortedYMs.forEach(ym=>{
+    const [y,m]=ym.split('-'),mDates=groups[ym],mT=mDates.reduce((s,d)=>s+getDayTotal(d),0);
+    rows+=`<tr class="month-total-row"><td class="col-date">📅 ${y.slice(2)}년 ${m}월 합계</td><td class="col-subtotal">${mT.toLocaleString()}</td>
+      ${PRODUCTS.map(p=>{const key=getKey(p),v=mDates.reduce((s,d)=>s+(dailyData[d][key]||0),0);return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}</tr>`;
+    [...mDates].sort().reverse().forEach(date=>{
+      const dt=getDayTotal(date);
+      rows+=`<tr><td class="col-date">${fmtDate(date)}</td><td class="col-subtotal ${dt?'num':'zero'}">${dt||'-'}</td>
+        ${PRODUCTS.map(p=>{const v=dailyData[date][getKey(p)]||0;return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}</tr>`;
+    });
+  });
+  document.getElementById('daily-tbody').innerHTML=rows;
+  setTimeout(()=>syncScroll('daily-table-wrap','daily-scroll-top','daily-scroll-inner'),100);
+  let mobileHTML='';
+  if(!currentMonth){
+    getYears().sort().reverse().forEach(y=>{
+      const yT=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,y),0);
+      if(yT>0) mobileHTML+=`<div style="background:#e8f5e9;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;font-weight:700;color:#2e7d32;font-size:13px;"><span>🏆 ${y}년 합계</span><span>${yT.toLocaleString()}</span></div>`;
+    });
+  }
+  sortedYMs.forEach(ym=>{
+    const [y,m]=ym.split('-'),mDates=groups[ym],mT=mDates.reduce((s,d)=>s+getDayTotal(d),0);
+    mobileHTML+=`<div style="background:#fff8e1;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;font-weight:700;color:#e65100;font-size:13px;"><span>📅 ${y.slice(2)}년 ${m}월 합계</span><span>${mT.toLocaleString()}</span></div>`;
+    [...mDates].sort().reverse().forEach(date=>{
+      const dt=getDayTotal(date);
+      const items=Object.entries(dailyData[date]||{}).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+        .map(([k,v])=>{const prod=KEY_MAP[k];const name=prod?prod.name:k;
+          return `<div style="background:#f5f6fa;border-radius:6px;padding:4px 8px;font-size:12px;"><span style="color:#555;">${name}</span><span style="font-weight:700;margin-left:4px;">${v}</span></div>`;
+        }).join('');
+      mobileHTML+=`<div style="background:white;border-radius:10px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${items?'8px':'0'};">
+          <div style="font-size:15px;font-weight:700;">${fmtDate(date)}</div>
+          <div style="font-size:18px;font-weight:700;color:#4a90e2;">${dt||'-'}</div>
+        </div>
+        ${items?`<div style="display:flex;flex-wrap:wrap;gap:6px;">${items}</div>`:'<div style="font-size:12px;color:#ccc;">판매 없음</div>'}
+      </div>`;
+    });
+  });
+  document.getElementById('daily-mobile').innerHTML=mobileHTML;
+}
+
+// 업로드 - 같은 파일 재업로드 버그 수정 (input value 초기화)
+function handleFile(file){
+  // input 초기화해서 같은 파일 재선택 가능하게
+  const input = document.getElementById('upload-input');
+  input.value = '';
+
+  if(!file||!file.name.endsWith('.xlsx')){showUploadMsg('❌ xlsx 파일만 가능합니다.');return;}
+  const match=file.name.match(/^(\d{6})/);
+  if(!match){showUploadMsg('❌ 파일명 앞 6자리가 날짜여야 합니다.');return;}
+  const ds=match[1],dateKey=`20${ds.slice(0,2)}-${ds.slice(2,4)}-${ds.slice(4,6)}`;
+  showUploadMsg('⏳ '+ds+' 처리 중...');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets['주문서수식_스마트스토어'];
+      if(!ws){showUploadMsg('❌ 시트를 찾을 수 없습니다.');return;}
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      const newData={};
+      for(let i=16;i<rows.length;i++){
+        const code=String(rows[i][0]).trim(),qty=Number(rows[i][4]);
+        if(!code||!qty||isNaN(qty)) continue;
+        if(KEY_MAP[code]) newData[code]=(newData[code]||0)+qty;
+      }
+
+      // 현재 상태 스택에 저장 (최대 5개)
+      undoStack.push({
+        dateKey,
+        prevData: dailyData[dateKey] ? JSON.parse(JSON.stringify(dailyData[dateKey])) : null,
+        label: ds
+      });
+      if(undoStack.length > 5) undoStack.shift();
+      document.getElementById('undo-btn').classList.add('visible');
+
+      dailyData[dateKey]=newData;
+      const total=Object.values(newData).reduce((s,v)=>s+v,0);
+      showUploadMsg('✅ '+ds+' 완료! ('+total+'개)');
+      refreshAll();
+    }catch(err){showUploadMsg('❌ 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function undoUpload(){
+  if(undoStack.length===0) return;
+  const last=undoStack.pop();
+  if(last.prevData===null){
+    delete dailyData[last.dateKey];
+  } else {
+    dailyData[last.dateKey]=last.prevData;
+  }
+  showUploadMsg('↩ '+last.label+' 업로드 취소됨');
+  if(undoStack.length===0) document.getElementById('undo-btn').classList.remove('visible');
+  refreshAll();
+}
+
+function showUploadMsg(msg){
+  const el=document.getElementById('upload-inline-msg');
+  el.textContent=msg;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},5000);
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+initSummary();initMonthBtns();initChartRangeBtns();initChartPeriodSelect();
+renderDaily();renderMonthly();renderYearly();renderChart();
+</script>
+</body>
+</html>
