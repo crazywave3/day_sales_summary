@@ -173,9 +173,8 @@ tr:hover td.col-monthtotal { background: #f8f9ff !important; }
   <div class="header-right">
     <div id="upload-inline-msg" class="upload-inline-msg"></div>
     <div class="last-update" id="last-update"></div>
-    <div class="last-update" style="color:#aaa;">v2.1</div>
+    <div class="last-update" style="color:#aaa;">v2.3</div>
     <button class="undo-btn" id="undo-btn" onclick="undoUpload()">↩ 업로드 취소</button>
-    <label class="upload-btn">📂 주문서 업로드<input type="file" class="upload-input" id="upload-input" accept=".xlsx" onchange="handleFile(this.files[0])"></label>
   </div>
 </div>
 
@@ -322,11 +321,6 @@ const PRODUCTS = [
     "name": "타워곰솥 30cm",
     "code": "DYABA04-300",
     "col": 14
-  },
-  {
-    "name": "타워곰솥 일자 30",
-    "code": "DYABB04-300",
-    "col": 15
   },
   {
     "name": "잼팟 9리터",
@@ -664,59 +658,29 @@ const PRODUCTS = [
     "col": 82
   },
   {
-    "name": "봉투 거치대",
-    "code": "",
+    "name": "토르 2.5",
+    "code": "DJCG025A",
     "col": 83
   },
   {
-    "name": "수세미건조대 블랙",
-    "code": "DYHBA02-001",
+    "name": "브로즈 2.5",
+    "code": "DICG025A",
     "col": 84
   },
   {
-    "name": "수세미건조대 실버",
-    "code": "DYHBA01-001",
+    "name": "브로즈 3.5",
+    "code": "DICG035A",
     "col": 85
   },
   {
-    "name": "사각 멀티볼 소",
-    "code": "DYGEB45-032",
+    "name": "벨라 24",
+    "code": "DEBS240A",
     "col": 86
   },
   {
-    "name": "사각 멀티볼 중",
-    "code": "DYGEB45-042",
+    "name": "벨라 28",
+    "code": "DEBS280A",
     "col": 87
-  },
-  {
-    "name": "사각 멀티볼 대",
-    "code": "DYGEB45-056",
-    "col": 88
-  },
-  {
-    "name": "실속 믹싱볼 17cm",
-    "code": "DYGAA02-170",
-    "col": 89
-  },
-  {
-    "name": "실속 믹싱볼 19cm",
-    "code": "DYGAA02-190",
-    "col": 90
-  },
-  {
-    "name": "실속 믹싱볼 23cm",
-    "code": "DYGAA02-230",
-    "col": 91
-  },
-  {
-    "name": "실속 믹싱볼 25cm",
-    "code": "DYGAA02-250",
-    "col": 92
-  },
-  {
-    "name": "실속 믹싱볼 28cm",
-    "code": "DYGAA02-280",
-    "col": 93
   }
 ];
 const DAILY_RAW = {
