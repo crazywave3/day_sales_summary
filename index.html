@@ -173,16 +173,15 @@ tr:hover td.col-monthtotal { background: #f8f9ff !important; }
   <div class="header-right">
     <div id="upload-inline-msg" class="upload-inline-msg"></div>
     <div class="last-update" id="last-update"></div>
-    <div class="last-update" style="color:#aaa;">v2.5</div>
+    <div class="last-update" style="color:#aaa;">v2.9</div>
     <button class="undo-btn" id="undo-btn" onclick="undoUpload()">↩ 업로드 취소</button>
   </div>
 </div>
 
 <div class="tabs">
-  <div class="tab" onclick="switchTab('products',this)">품목별</div>
-  <div class="tab active" onclick="switchTab('monthly',this)">월별</div>
-  <div class="tab" onclick="switchTab('yearly',this)">연도별</div>
   <div class="tab" onclick="switchTab('daily',this)">일별</div>
+  <div class="tab active" onclick="switchTab('products',this)">월별</div>
+  <div class="tab" onclick="switchTab('yearly',this)">연도별</div>
 </div>
 
 <div class="content">
@@ -193,7 +192,17 @@ tr:hover td.col-monthtotal { background: #f8f9ff !important; }
     <div class="card"><div class="label">총 품목 수</div><div class="value" id="sum-products">-</div><div class="sub">관리 품목</div></div>
   </div>
 
-  <div class="view" id="view-products">
+  <!-- 월별 (구 품목별) - 기본 active -->
+  <div class="view active" id="view-products">
+    <!-- 월별 바 그래프 -->
+    <div class="monthly-bar-chart" id="monthly-bar-chart">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 id="monthly-bar-title" style="font-size:13px;font-weight:700;color:#1a1a2e;"></h3>
+        <select id="monthly-bar-year" onchange="renderMonthly()" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;outline:none;font-family:inherit;background:white;"></select>
+      </div>
+      <div class="mbc-cols" id="mbc-cols"></div>
+    </div>
+    <!-- 품목별 차트 -->
     <div class="chart-toolbar">
       <div class="toggle-btns" id="chart-range-btns"></div>
       <select id="chart-period" onchange="renderChart()"></select>
@@ -206,30 +215,6 @@ tr:hover td.col-monthtotal { background: #f8f9ff !important; }
     <div class="chart-container" id="chart-container"></div>
   </div>
 
-  <div class="view active" id="view-monthly">
-    <!-- 월별 바 그래프 + 연도 선택 -->
-    <div class="monthly-bar-chart" id="monthly-bar-chart">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 id="monthly-bar-title" style="font-size:13px;font-weight:700;color:#1a1a2e;"></h3>
-        <select id="monthly-bar-year" onchange="renderMonthly()" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;outline:none;font-family:inherit;background:white;"></select>
-      </div>
-      <div class="mbc-cols" id="mbc-cols"></div>
-    </div>
-    <div class="toolbar">
-      <select id="monthly-sort" onchange="renderMonthly()">
-        <option value="total-desc">판매량 높은순</option>
-        <option value="total-asc">판매량 낮은순</option>
-        <option value="name">이름순</option>
-      </select>
-    </div>
-    <!-- 카드 (모바일만 표시, 카드 먼저) -->
-    <div id="monthly-mobile" class="mobile-list" style="margin-bottom:16px;"></div>
-    <div class="table-outer">
-      <div class="table-scroll-top" id="monthly-scroll-top"><div class="table-scroll-top-inner" id="monthly-scroll-inner"></div></div>
-      <div class="table-wrap" id="monthly-table-wrap"><table><thead id="monthly-thead"></thead><tbody id="monthly-tbody"></tbody></table></div>
-    </div>
-  </div>
-
   <div class="view" id="view-yearly">
     <div class="toolbar">
       <select id="yearly-sort" onchange="renderYearly()">
@@ -239,7 +224,6 @@ tr:hover td.col-monthtotal { background: #f8f9ff !important; }
       </select>
     </div>
     <div class="year-cards" id="year-cards"></div>
-    <!-- 카드 (모바일만 표시, 카드 먼저) -->
     <div id="yearly-mobile" class="mobile-list" style="margin-bottom:16px;"></div>
     <div class="table-outer">
       <div class="table-scroll-top" id="yearly-scroll-top"><div class="table-scroll-top-inner" id="yearly-scroll-inner"></div></div>
@@ -2120,11 +2104,10 @@ function clearSearch(){
   renderChart();
 }
 
-let chartRange='top100days';
-function getTop100DaysTotal(p){
-  // 최근 100일 날짜 계산
-  const allDates=Object.keys(dailyData).filter(d=>getDayTotal(d)>=0).sort().reverse();
-  const recent=allDates.slice(0,100);
+let chartRange='top60days';
+function getTop60DaysTotal(p){
+  const allDates=Object.keys(dailyData).sort().reverse();
+  const recent=allDates.slice(0,60);
   const key=getKey(p);
   return recent.reduce((s,d)=>s+(dailyData[d][key]||0),0);
 }
@@ -2140,7 +2123,7 @@ function initChartRangeBtns(){
   const pastYears=activeYears.filter(y=>y!==currentYear);
   const currentMonths=getMonths(currentYear).slice().reverse();
 
-  let btns=[{r:'top100days',label:'최근 100일 TOP20'}];
+  let btns=[{r:'top60days',label:'최근 60일 TOP20'}];
   // 현재 연도 누계
   btns.push({r:'year_'+currentYear, label:currentYear+'년'});
   // 현재 연도 월별 (최신 월 먼저)
@@ -2174,8 +2157,8 @@ function initChartPeriodSelect(){
 function renderChart(){
   // chartRange에 따라 데이터 결정
   let getVal, topN=null, title='';
-  if(chartRange==='top100days'){
-    getVal=p=>getTop100DaysTotal(p);
+  if(chartRange==='top60days'){
+    getVal=p=>getTop60DaysTotal(p);
     topN=20;
   } else if(chartRange.startsWith('year_')){
     const y=chartRange.slice(5);
@@ -2219,16 +2202,8 @@ function renderMonthly(){
   yearSel.innerHTML = activeYears.map(y=>`<option value="${y}">${y}년</option>`).join('');
   if(prevVal && activeYears.includes(prevVal)) yearSel.value = prevVal;
   const selectedYear = yearSel.value || getLatestYear();
-
-  const ly=getLatestYear();
-  const months=getMonths(ly).slice().reverse();
-  const sort=document.getElementById('monthly-sort').value;
-  const rankMap={};
-  [...PRODUCTS].sort((a,b)=>getProductTotal(b,ly)-getProductTotal(a,ly)).forEach((p,i)=>{rankMap[getKey(p)]=i+1;});
-  let prods=[...PRODUCTS];
-  if(sort==='total-desc') prods.sort((a,b)=>getProductTotal(b,ly)-getProductTotal(a,ly));
-  else if(sort==='total-asc') prods.sort((a,b)=>getProductTotal(a,ly)-getProductTotal(b,ly));
-  else prods.sort((a,b)=>a.name.localeCompare(b.name));
+  const ly = getLatestYear();
+  const latestM = getLatestMonth().split('-')[1];
 
   // 월별 바 그래프 (선택된 연도 기준)
   const allMonths=['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -2238,7 +2213,6 @@ function renderMonthly(){
   });
   const maxMonthVal=Math.max(...monthTotals,1);
   const BAR_MAX_H=160;
-  const latestM=getLatestMonth().split('-')[1];
   document.getElementById('monthly-bar-title').textContent=selectedYear+'년 월별 판매량';
   document.getElementById('mbc-cols').innerHTML=
     allMonths.map((m,i)=>{
@@ -2252,42 +2226,6 @@ function renderMonthly(){
         <div class="mbc-label">${parseInt(m)}월</div>
       </div>`;
     }).join('');
-
-  // 테이블 - 합계 열도 sticky
-  document.getElementById('monthly-thead').innerHTML=
-    '<tr><th class="col-rank">순위</th><th class="col-name">품목명</th><th class="col-monthtotal">합계</th>'+
-    months.map(ym=>`<th>${ym.split('-')[1]}월</th>`).join('')+'</tr>';
-  const gt=PRODUCTS.reduce((s,p)=>s+getProductTotal(p,ly),0);
-  let rows=`<tr class="total-row"><td class="col-rank"></td><td class="col-name">합계</td><td class="col-monthtotal num">${gt.toLocaleString()}</td>
-    ${months.map(ym=>{const v=PRODUCTS.reduce((s,p)=>s+getProductMonthTotal(p,ym),0);return `<td class="num">${v.toLocaleString()}</td>`;}).join('')}</tr>`;
-  prods.forEach(p=>{
-    const total=getProductTotal(p,ly),rank=rankMap[getKey(p)];
-    const rc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
-    rows+=`<tr><td class="col-rank"><span class="rank-num ${rc}">${rank}</span></td>
-      <td class="col-name" title="${p.name}">${p.name}</td><td class="col-monthtotal num">${total||'-'}</td>
-      ${months.map(ym=>{const v=getProductMonthTotal(p,ym);return `<td class="${v?'num':'zero'}">${v||'-'}</td>`;}).join('')}</tr>`;
-  });
-  document.getElementById('monthly-tbody').innerHTML=rows;
-  setTimeout(()=>syncScroll('monthly-table-wrap','monthly-scroll-top','monthly-scroll-inner'),100);
-  const recentMonths=months.slice(0,3);
-  document.getElementById('monthly-mobile').innerHTML=prods.map(p=>{
-    const total=getProductTotal(p,ly),rank=rankMap[getKey(p)];
-    const bc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
-    const bgColor=bc==='gold'?'#f5a623':bc==='silver'?'#9b9b9b':bc==='bronze'?'#c47c3a':'#eee';
-    return `<div style="background:white;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-size:14px;font-weight:700;flex:1;margin-right:8px;">${p.name}</div>
-        <span style="background:${bgColor};color:${bc?'white':'#888'};font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px;">${rank}위</span>
-        <div style="font-size:18px;font-weight:700;color:#4a90e2;margin-left:8px;">${total}</div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-        ${recentMonths.map(ym=>{const m=ym.split('-')[1];const v=getProductMonthTotal(p,ym);
-          return `<div style="background:#f5f6fa;border-radius:6px;padding:6px;text-align:center;">
-            <div style="font-size:10px;color:#888;">${m}월</div>
-            <div style="font-size:14px;font-weight:700;color:${v?'#1a1a2e':'#ddd'};">${v||'-'}</div></div>`;
-        }).join('')}
-      </div></div>`;
-  }).join('');
 }
 
 function renderYearly(){
